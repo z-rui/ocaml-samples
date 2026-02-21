@@ -20,11 +20,8 @@ let enable_flags = [| print_lines; print_words; print_chars |]
 let results = Queue.create ()
 
 let proc_file filename in_chan =
-  if not (!print_lines || !print_words || !print_chars) then begin
-    print_lines := true;
-    print_words := true;
-    print_chars := true
-  end;
+  if not (Array.exists ( ! ) enable_flags) then
+    Array.iter (fun en -> en := true) enable_flags;
   let stats = run_wc in_chan in
   let filtered_stats =
     List.filteri
