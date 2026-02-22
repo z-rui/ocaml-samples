@@ -68,11 +68,6 @@ module Polygon = struct
   let advance dt p =
     p.angle <- mod_float (Float.fma p.angle_vel dt p.angle) two_pi
 
-  let vertex p i : Vec2.t =
-    let r = p.radius in
-    let theta = Float.fma p.alpha (float_of_int i) p.angle in
-    Vec2.from_polar (r, theta)
-
   let to_boundary p pos =
     let r, theta = Vec2.to_polar pos in
     let i = Float.floor ((two_pi +. theta -. p.angle) /. p.alpha) in
@@ -97,8 +92,8 @@ let create ~gravity ?(ball_ball_recovery_coeff = 0.9)
     ?(ball_poly_recovery_coeff = 0.8) balls poly =
   { balls; poly; gravity; ball_ball_recovery_coeff; ball_poly_recovery_coeff }
 
-let handle_ball_ball_collision ~e (b : Ball.t) (b' : Ball.t) =
-  let dpos = Vec2.(Ball.(diff (pos b) (pos b'))) in
+let handle_ball_ball_collision ~e b b' =
+  let dpos = Vec2.diff (Ball.pos b) (Ball.pos b') in
   let dist = sqrt (Vec2.dotp dpos dpos) in
   let overlap = Ball.(radius b +. radius b') -. dist in
   if overlap > 0. && dist > 0. then begin
