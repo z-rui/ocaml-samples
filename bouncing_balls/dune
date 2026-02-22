@@ -1,0 +1,3 @@
+(executable
+ (name bouncing_balls)
+ (libraries raylib))
