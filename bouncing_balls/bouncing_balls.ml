@@ -1,27 +1,15 @@
 let two_pi = 2. *. Float.pi
 let rad_to_deg x = x *. 180. /. Float.pi
 
-let setup ~period ~poly_radius ~poly_sides ~ball_radius ~num_balls =
-  let open Simulator in
-  let poly =
-    Polygon.create ~radius:poly_radius ~sides:poly_sides
-      ~angle_vel:(two_pi /. period)
-  in
-  let balls =
-    let safe_radius = Polygon.inner_radius poly -. ball_radius in
-    Array.init num_balls (fun _ ->
-        let r, theta = Random.(float safe_radius, float two_pi) in
-        let pos = Vec2.(from_polar (r, theta)) in
-        Ball.create ~radius:ball_radius ~pos)
-  in
-  (balls, poly)
-
 (* Parameters *)
 let num_balls = ref 10
 let poly_radius = ref 200.
 let poly_sides = ref 7
 let period = ref 10.
 let ball_radius = ref 10.
+let screen_width = ref 640
+let screen_height = ref 480
+let target_fps = ref 60
 
 let argspec =
   [
@@ -30,30 +18,44 @@ let argspec =
     ( "-t",
       Arg.Set_float period,
       "period of polygon rotation in seconds (default 10)" );
-    ("-R", Arg.Set_float poly_radius, "Polygon radius (default 200.)");
+    ("-R", Arg.Set_float poly_radius, "Polygon radius (default 200)");
     ("-r", Arg.Set_float ball_radius, "Ball radius (default 10)");
     ("-n", Arg.Set_int num_balls, "Number of balls (default 10)");
+    ("-w", Arg.Set_int screen_width, "Screen width (default 640)");
+    ("-h", Arg.Set_int screen_height, "Screen width (default 480)");
+    ("-fps", Arg.Set_int target_fps, "Target frame per second (default 60)");
   ]
 
 let () =
   Arg.parse argspec ignore "bouncing_balls";
   Random.self_init ();
 
-  let balls, poly =
-    setup ~period:!period ~poly_radius:!poly_radius ~poly_sides:!poly_sides
-      ~ball_radius:!ball_radius ~num_balls:!num_balls
+  (* Setup simulator *)
+  let poly =
+    Simulator.Polygon.create ~radius:!poly_radius ~sides:!poly_sides
+      ~angle_vel:(two_pi /. !period)
+  in
+  let balls =
+    let safe_radius = Simulator.Polygon.inner_radius poly -. !ball_radius in
+    Array.init !num_balls (fun _ ->
+        let r, theta = Random.(float safe_radius, float two_pi) in
+        let pos = Simulator.Vec2.(from_polar (r, theta)) in
+        Simulator.Ball.create ~radius:!ball_radius ~pos)
   in
   let gravity = Simulator.Vec2.from_rect (0., 100.) in
   let sim = Simulator.(create ~gravity balls poly) in
-  let target_fps = 60 in
 
   (* Setup graphics *)
   let open Raylib in
-  set_config_flags [ ConfigFlags.Msaa_4x_hint ];
-  init_window 640 480 "Bouncing_balls demo";
-  let center = Vector2.create 320. 240. in
-  set_target_fps target_fps;
-  let frame_time = 1. /. Float.of_int target_fps in
+  set_config_flags ConfigFlags.[ Msaa_4x_hint ];
+  init_window !screen_width !screen_height "Bouncing_balls demo";
+  let center =
+    Vector2.create
+      (0.5 *. Float.of_int !screen_width)
+      (0.5 *. Float.of_int !screen_height)
+  in
+  set_target_fps !target_fps;
+  let frame_time = 1. /. Float.of_int !target_fps in
 
   (* Simulation and rendering *)
   while not (window_should_close ()) do
