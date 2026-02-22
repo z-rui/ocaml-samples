@@ -1,2 +1,2 @@
 (executable
- (name bf))
+ (public_name bf))
