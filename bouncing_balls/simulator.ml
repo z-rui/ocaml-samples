@@ -97,12 +97,7 @@ let create ~gravity ?(ball_ball_recovery_coeff = 0.9)
     ?(ball_poly_recovery_coeff = 0.8) balls poly =
   { balls; poly; gravity; ball_ball_recovery_coeff; ball_poly_recovery_coeff }
 
-let adjust_velocity ~recovery_coeff ~dir ball =
-  let v = Vec2.dotp (Ball.vel ball) dir in
-  let dv = -.v *. (1. +. recovery_coeff) in
-  Ball.accel dir dv ball
-
-let handle_ball_ball_collision ~recovery_coeff (b : Ball.t) (b' : Ball.t) =
+let handle_ball_ball_collision ~e (b : Ball.t) (b' : Ball.t) =
   let dpos = Vec2.(Ball.(diff (pos b) (pos b'))) in
   let dist = sqrt (Vec2.dotp dpos dpos) in
   let overlap = Ball.(radius b +. radius b') -. dist in
@@ -111,11 +106,13 @@ let handle_ball_ball_collision ~recovery_coeff (b : Ball.t) (b' : Ball.t) =
     (* adjust position *)
     Ball.move dpos overlap b;
     (* adjust velocity *)
-    adjust_velocity ~recovery_coeff ~dir:dpos b;
-    adjust_velocity ~recovery_coeff ~dir:dpos b'
+    let u = Vec2.dotp (Ball.vel b) dpos in
+    let u' = Vec2.dotp (Ball.vel b') dpos in
+    Ball.accel dpos (-.u +. (u' *. e)) b;
+    Ball.accel dpos (-.u' +. (u *. e)) b'
   end
 
-let handle_ball_poly_collision ~recovery_coeff poly ball =
+let handle_ball_poly_collision ~e poly ball =
   let pos = Ball.pos ball in
   let dist, theta = Polygon.to_boundary poly pos in
   let clearance = dist -. Ball.radius ball in
@@ -128,7 +125,9 @@ let handle_ball_poly_collision ~recovery_coeff poly ball =
     let wall_vel = Polygon.vel_at poly contact_point in
     Ball.accel wall_vel (-1.) ball;
     (* ball's velocity is now relative to wall *)
-    adjust_velocity ~recovery_coeff ~dir ball;
+    let u = Vec2.dotp (Ball.vel ball) dir in
+    let du = -.u *. (1. +. e) in
+    Ball.accel dir du ball;
     Ball.accel wall_vel 1. ball
     (* ball's velocity is now relative to ground *)
   end
@@ -141,13 +140,12 @@ let advance ~dt sim =
   Array.iteri
     begin fun i b ->
       for j = i + 1 to last do
-        let recovery_coeff = sim.ball_ball_recovery_coeff in
-        handle_ball_ball_collision ~recovery_coeff balls.(i) balls.(j)
+        handle_ball_ball_collision ~e:sim.ball_ball_recovery_coeff balls.(i)
+          balls.(j)
       done
     end
     balls;
   Array.iter
-    (handle_ball_poly_collision ~recovery_coeff:sim.ball_poly_recovery_coeff
-       sim.poly)
+    (handle_ball_poly_collision ~e:sim.ball_poly_recovery_coeff sim.poly)
     balls;
   Array.iter (Ball.advance dt) balls
