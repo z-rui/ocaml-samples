@@ -71,7 +71,7 @@ module Polygon = struct
   let vertex p i : Vec2.t =
     let r = p.radius in
     let theta = Float.fma p.alpha (float_of_int i) p.angle in
-    { x = r *. cos theta; y = r *. sin theta }
+    Vec2.from_polar (r, theta)
 
   let to_boundary p pos =
     let r, theta = Vec2.to_polar pos in
