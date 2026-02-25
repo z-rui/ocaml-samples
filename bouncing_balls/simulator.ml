@@ -116,7 +116,6 @@ let handle_ball_poly_collision ~e poly ball =
 let advance ~dt sim =
   let balls = sim.balls in
   Array.iter (Ball.accel sim.gravity dt) balls;
-  Polygon.advance dt sim.poly;
   let last = Array.length balls - 1 in
   for i = 0 to last do
     let b = balls.(i) in
@@ -127,4 +126,5 @@ let advance ~dt sim =
   Array.iter
     (handle_ball_poly_collision ~e:sim.ball_poly_recovery_coeff sim.poly)
     balls;
-  Array.iter (Ball.advance dt) balls
+  Array.iter (Ball.advance dt) balls;
+  Polygon.advance dt sim.poly
