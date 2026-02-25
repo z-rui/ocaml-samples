@@ -102,18 +102,15 @@ let handle_ball_poly_collision ~e poly ball =
   let clearance = dist -. Ball.radius ball in
   if clearance < 0. then begin
     let dir = Vec2.from_polar (1., theta) in
-    (* Adjust position *)
+    (* adjust position *)
     Ball.move dir clearance ball;
-    (* Adjust velocity *)
+    (* adjust velocity *)
     let contact_point = Vec2.fma_scalar pos dir dist in
     let wall_vel = Polygon.vel_at poly contact_point in
-    Ball.accel wall_vel (-1.) ball;
-    (* ball's velocity is now relative to wall *)
-    let u = Vec2.dot_product (Ball.vel ball) dir in
+    let rel_vel = Vec2.subtract (Ball.vel ball) wall_vel in
+    let u = Vec2.dot_product rel_vel dir in
     let du = -.u *. (1. +. e) in
-    Ball.accel dir du ball;
-    Ball.accel wall_vel 1. ball
-    (* ball's velocity is now relative to ground *)
+    Ball.accel dir du ball
   end
 
 let advance ~dt sim =
@@ -121,13 +118,12 @@ let advance ~dt sim =
   Array.iter (Ball.accel sim.gravity dt) balls;
   Polygon.advance dt sim.poly;
   let last = Array.length balls - 1 in
-  Array.iteri
-    begin fun i b ->
-      for j = i + 1 to last do
-        handle_ball_ball_collision ~e:sim.ball_ball_recovery_coeff b balls.(j)
-      done
-    end
-    balls;
+  for i = 0 to last do
+    let b = balls.(i) in
+    for j = i + 1 to last do
+      handle_ball_ball_collision ~e:sim.ball_ball_recovery_coeff b balls.(j)
+    done
+  done;
   Array.iter
     (handle_ball_poly_collision ~e:sim.ball_poly_recovery_coeff sim.poly)
     balls;
