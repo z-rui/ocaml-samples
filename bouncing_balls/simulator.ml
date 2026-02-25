@@ -1,42 +1,34 @@
 let two_pi = 2. *. Float.pi
 
 module Vec2 = struct
-  type t = { mutable x : float; mutable y : float }
+  (* type t = { mutable x : float; mutable y : float } *)
+  include Raylib.Vector2
 
-  let[@inline] to_rect { x; y } = (x, y)
-  let[@inline] from_rect (x, y) = { x; y }
-  let[@inline] to_polar { x; y } = (hypot x y, atan2 y x)
+  let[@inline] from_rect (x, y) = create x y
+  let[@inline] to_rect v = (x v, y v)
 
-  let[@inline] from_polar (r, theta) =
-    { x = r *. cos theta; y = r *. sin theta }
+  let[@inline] to_polar v =
+    let a, b = to_rect v in
+    (hypot a b, atan2 b a)
 
-  let[@inline] dotp u v = (u.x *. v.x) +. (u.y *. v.y)
-  let[@inline] diff u v = { x = u.x -. v.x; y = u.y -. v.y }
+  let[@inline] from_polar (r, theta) = create (r *. cos theta) (r *. sin theta)
 
   let[@inline] fma_scalar u v k =
-    { x = Float.fma k v.x u.x; y = Float.fma k v.y u.y }
-
-  let[@inline] scale_ ?out u k =
-    let w = match out with None -> u | Some w -> w in
-    w.x <- u.x *. k;
-    w.y <- u.y *. k
-
-  let[@inline] fma_scalar_ ?out u v k =
-    let w = match out with None -> u | Some w -> w in
-    w.x <- Float.fma k v.x u.x;
-    w.y <- Float.fma k v.y u.y
+    let x1, y1 = (x u, y u) in
+    let x2, y2 = (x v, y v) in
+    create (Float.fma k x2 x1) (Float.fma k y2 y1)
 end
 
 module Ball = struct
-  type t = { radius : float; pos : Vec2.t; vel : Vec2.t }
+  type t = { radius : float; mutable pos : Vec2.t; mutable vel : Vec2.t }
 
   let radius b = b.radius
   let pos b = b.pos
   let vel b = b.vel
-  let create ~radius ~pos = { radius; pos; vel = { x = 0.; y = 0. } }
-  let accel dir amount b = Vec2.fma_scalar_ b.vel dir amount
-  let move dir amount b = Vec2.fma_scalar_ b.pos dir amount
-  let advance dt b = Vec2.fma_scalar_ b.pos b.vel dt
+  let create ~radius ~pos = { radius; pos; vel = Vec2.zero () }
+  let[@inline] accel dir amount b = b.vel <- Vec2.fma_scalar b.vel dir amount
+  let[@inline] move dir amount b = b.pos <- Vec2.fma_scalar b.pos dir amount
+  let[@inline] advance dt b = move b.vel dt b
 end
 
 module Polygon = struct
@@ -74,10 +66,7 @@ module Polygon = struct
     let theta' = (p.alpha *. (i +. 0.5)) +. p.angle in
     (p.inner_radius -. (r *. cos (theta -. theta')), theta')
 
-  let vel_at p pos =
-    let v = Vec2.{ x = -.pos.y; y = pos.x } in
-    Vec2.scale_ v p.angle_vel;
-    v
+  let vel_at p pos = Vec2.(scale (create (-.y pos) (x pos)) p.angle_vel)
 end
 
 type t = {
@@ -93,18 +82,18 @@ let create ~gravity ?(ball_ball_recovery_coeff = 0.9)
   { balls; poly; gravity; ball_ball_recovery_coeff; ball_poly_recovery_coeff }
 
 let handle_ball_ball_collision ~e b b' =
-  let dpos = Vec2.diff (Ball.pos b) (Ball.pos b') in
-  let dist = sqrt (Vec2.dotp dpos dpos) in
+  let dpos = Vec2.subtract (Ball.pos b) (Ball.pos b') in
+  let dist = sqrt (Vec2.dot_product dpos dpos) in
   let overlap = Ball.(radius b +. radius b') -. dist in
   if overlap > 0. && dist > 0. then begin
-    Vec2.scale_ dpos (1. /. dist);
+    let dir = Vec2.scale dpos (1. /. dist) in
     (* adjust position *)
-    Ball.move dpos overlap b;
+    Ball.move dir overlap b;
     (* adjust velocity *)
-    let u = Vec2.dotp (Ball.vel b) dpos in
-    let u' = Vec2.dotp (Ball.vel b') dpos in
-    Ball.accel dpos (-.u +. (u' *. e)) b;
-    Ball.accel dpos (-.u' +. (u *. e)) b'
+    let u = Vec2.dot_product (Ball.vel b) dir in
+    let u' = Vec2.dot_product (Ball.vel b') dir in
+    Ball.accel dir (-.u +. (u' *. e)) b;
+    Ball.accel dir (-.u' +. (u *. e)) b'
   end
 
 let handle_ball_poly_collision ~e poly ball =
@@ -120,7 +109,7 @@ let handle_ball_poly_collision ~e poly ball =
     let wall_vel = Polygon.vel_at poly contact_point in
     Ball.accel wall_vel (-1.) ball;
     (* ball's velocity is now relative to wall *)
-    let u = Vec2.dotp (Ball.vel ball) dir in
+    let u = Vec2.dot_product (Ball.vel ball) dir in
     let du = -.u *. (1. +. e) in
     Ball.accel dir du ball;
     Ball.accel wall_vel 1. ball
@@ -135,8 +124,7 @@ let advance ~dt sim =
   Array.iteri
     begin fun i b ->
       for j = i + 1 to last do
-        handle_ball_ball_collision ~e:sim.ball_ball_recovery_coeff balls.(i)
-          balls.(j)
+        handle_ball_ball_collision ~e:sim.ball_ball_recovery_coeff b balls.(j)
       done
     end
     balls;
