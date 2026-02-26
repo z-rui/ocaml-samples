@@ -1,0 +1,3 @@
+(executable
+ (public_name echo)
+ (libraries unix threads))
