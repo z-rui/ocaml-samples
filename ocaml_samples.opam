@@ -4,6 +4,8 @@ depends: [
   "dune" {>= "3.21"}
   "domainslib"
   "raylib"
+  "eio"
+  "eio_main"
   "odoc" {with-doc}
 ]
 build: [

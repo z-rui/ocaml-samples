@@ -7,4 +7,6 @@
   (name ocaml_samples)
   (depends
     domainslib
-    raylib))
+    raylib
+    eio
+    eio_main))
