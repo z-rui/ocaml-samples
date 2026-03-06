@@ -15,10 +15,7 @@ module Cells = struct
     List.iter2
       begin fun di dj ->
         let i' = (i + di + rows) mod rows and j' = (j + dj + cols) mod cols in
-        let encoded = t.{i', j'} in
-        let n = (encoded land 0x7f) + inc in
-        assert (n >= 0 && n <= 8);
-        t.{i', j'} <- encoded land 0x80 lor n
+        t.{i', j'} <- t.{i', j'} + inc
       end
       [ -1; -1; -1; 0; 0; 1; 1; 1 ]
       [ -1; 0; 1; -1; 1; -1; 0; 1 ]
