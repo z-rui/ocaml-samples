@@ -6,9 +6,7 @@ module Cells = struct
     Bigarray.Array2.fill cells 0;
     cells
 
-  let get_alive (cells : t) i j =
-    let encoded = cells.{i, j} in
-    encoded land 0x80 <> 0
+  let get_alive (cells : t) i j = cells.{i, j} land 0x80 <> 0
 
   let update_neighbors (t : t) i j inc =
     let rows, cols = Bigarray.Array2.(dim1 t, dim2 t) in

@@ -1,15 +1,18 @@
 let rows = ref 60
 let cols = ref 80
 let scale = ref 10
+let fps = ref 15
 
 let arg_spec =
   [
     ("-w", Arg.Set_int cols, "number of columns");
     ("-h", Arg.Set_int rows, "number of rows");
     ("-s", Arg.Set_int scale, "size of each cell, in pixels");
+    ("-fps", Arg.Set_int fps, "target frames per second");
   ]
 
 let () =
+  Arg.parse arg_spec ignore "life [-w width] [-h height] [-s scale]";
   Random.self_init ();
   let rows, cols = (!rows, !cols) in
   let scale = !scale in
@@ -20,7 +23,7 @@ let () =
       if Random.int 8 = 0 then State.set_alive state i j true
     done
   done;
-  Raylib.set_target_fps 10;
+  Raylib.set_target_fps !fps;
   while not (Raylib.window_should_close ()) do
     let open Raylib in
     begin_drawing ();
