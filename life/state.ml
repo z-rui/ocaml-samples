@@ -17,10 +17,15 @@ module Cells = struct
     in
     let i_p = pred' i rows and i_n = succ' i rows in
     let j_p = pred' j cols and j_n = succ' j cols in
-    Array.iter2
-      (fun i j -> t.{i, j} <- t.{i, j} + inc)
-      [| i_p; i_p; i_p; i; i; i_n; i_n; i_n |]
-      [| j_p; j; j_n; j_p; j_n; j_p; j; j_n |]
+    let upd i j = t.{i, j} <- t.{i, j} + inc in
+    upd i_p j_p;
+    upd i_p j;
+    upd i_p j_n;
+    upd i j_p;
+    upd i j_n;
+    upd i_n j_p;
+    upd i_n j;
+    upd i_n j_n
 
   let set_alive (t : t) i j alive =
     let encoded = t.{i, j} in
