@@ -10,13 +10,17 @@ module Cells = struct
 
   let update_neighbors (t : t) i j inc =
     let rows, cols = Bigarray.Array2.(dim1 t, dim2 t) in
-    List.iter2
-      begin fun di dj ->
-        let i' = (i + di + rows) mod rows and j' = (j + dj + cols) mod cols in
-        t.{i', j'} <- t.{i', j'} + inc
-      end
-      [ -1; -1; -1; 0; 0; 1; 1; 1 ]
-      [ -1; 0; 1; -1; 1; -1; 0; 1 ]
+    let pred' x m = if x = 0 then m - 1 else x - 1 in
+    let succ' x m =
+      let x' = x + 1 in
+      if x' = m then 0 else x'
+    in
+    let i_p = pred' i rows and i_n = succ' i rows in
+    let j_p = pred' j cols and j_n = succ' j cols in
+    Array.iter2
+      (fun i j -> t.{i, j} <- t.{i, j} + inc)
+      [| i_p; i_p; i_p; i; i; i_n; i_n; i_n |]
+      [| j_p; j; j_n; j_p; j_n; j_p; j; j_n |]
 
   let set_alive (t : t) i j alive =
     let encoded = t.{i, j} in
@@ -45,8 +49,12 @@ let create rows cols =
   }
 
 let dim t = Bigarray.Array2.(dim1 t.cells, dim2 t.cells)
-let get_alive t = Cells.get_alive @@ if t.phase then t.cells' else t.cells
-let set_alive t = Cells.set_alive @@ if t.phase then t.cells' else t.cells
+
+let get_alive t i j =
+  Cells.get_alive (if t.phase then t.cells' else t.cells) i j
+
+let set_alive t i j v =
+  Cells.set_alive (if t.phase then t.cells' else t.cells) i j v
 
 let next t =
   let rows, cols = dim t in
