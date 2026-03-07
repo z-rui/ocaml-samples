@@ -17,6 +17,10 @@ let () =
   let rows, cols = (!rows, !cols) in
   let scale = !scale in
   Raylib.init_window (cols * scale) (rows * scale) "Conway's Game of Life";
+  let camera =
+    let z = Raylib.Vector2.zero () in
+    Raylib.Camera2D.create z z 0. (float_of_int scale)
+  in
   let state = State.create rows cols in
   for i = 0 to rows - 1 do
     for j = 0 to cols - 1 do
@@ -28,13 +32,13 @@ let () =
     let open Raylib in
     begin_drawing ();
     clear_background Color.blue;
-    let rows, cols = State.dim state in
+    begin_mode_2d camera;
     for i = 0 to rows - 1 do
       for j = 0 to cols - 1 do
-        if State.get_alive state i j then
-          draw_rectangle (j * scale) (i * scale) scale scale Color.white
+        if State.get_alive state i j then draw_pixel j i Color.white
       done
     done;
+    end_mode_2d ();
     draw_fps 0 0;
     end_drawing ();
     State.next state
